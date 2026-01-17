@@ -7,6 +7,8 @@
 
 #include "kernels/defines.h"
 #include "kernels/kernels.h"
+#include "libgpu/shared_device_buffer.h"
+#include "libgpu/work_size.h"
 
 #include <fstream>
 
@@ -64,8 +66,27 @@ void run(int argc, char** argv)
         // Запускаем кернел, с указанием размера рабочего пространства и передачей всех аргументов
         // Если хотите - можете удалить ветвление здесь и оставить только тот код который соответствует вашему выбору API
         if (context.type() == gpu::Context::TypeOpenCL) {
+            buffer2_pow2_sum_gpu.writeN(as.data(), n);
+
+            gpu::WorkSize workSize(GROUP_SIZE, n);
+            ocl_fill_with_zeros.exec(workSize, prefix_sum_accum_gpu, n);
+
+            auto& b1 = buffer1_pow2_sum_gpu;
+            auto& b2 = buffer2_pow2_sum_gpu;
+
+            uint k = 1; 
+            uint size = n;
+
+            ocl_prefix_accumulation.exec(workSize, b2, prefix_sum_accum_gpu, n, k);
+            while (k < n) {
+                k *= 2;
+                ocl_sum_reduction.exec(workSize, b2, b1, size);
+                size = (size + 1) / 2;
+
+                ocl_prefix_accumulation.exec(workSize, b1, prefix_sum_accum_gpu, n, k);
+                std::swap(b1, b2);
+            }
             // TODO
-            throw std::runtime_error(CODE_IS_NOT_IMPLEMENTED);
             // ocl_fill_with_zeros.exec();
             // ocl_sum_reduction.exec();
             // ocl_prefix_accumulation.exec();
