@@ -7,8 +7,6 @@
 
 #include "kernels/defines.h"
 #include "kernels/kernels.h"
-#include "libgpu/shared_device_buffer.h"
-#include "libgpu/work_size.h"
 
 #include <fstream>
 
