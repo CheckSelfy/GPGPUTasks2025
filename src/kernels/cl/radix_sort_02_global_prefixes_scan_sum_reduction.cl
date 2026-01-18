@@ -12,7 +12,7 @@ __kernel void radix_sort_02_global_prefixes_scan_sum_reduction(
     unsigned int n)
 {
     uint idx = get_global_id(0);
-    if (idx >= n) { return; }
+    if (2 * idx >= n) { return; }
 
     if (idx * 2 + 1 < n) { 
         next_pow2_sum[idx] = pow2_sum[idx  * 2] + pow2_sum[idx * 2 + 1];
