@@ -10,6 +10,7 @@
 #include "kernels/kernels.h"
 
 #include "debug.h" // TODO очень советую использовать debug::prettyBits(...) для отладки
+#include "libgpu/work_size.h"
 
 #include <fstream>
 
@@ -51,6 +52,7 @@ void run(int argc, char** argv)
     FastRandom r;
 
     int n = 100*1000*1000; // TODO при отладке используйте минимальное n (например n=5 или n=10) при котором воспроизводится бага
+    // int n = 100; // TODO при отладке используйте минимальное n (например n=5 или n=10) при котором воспроизводится бага
     int max_value = std::numeric_limits<int>::max(); // TODO при отладке используйте минимальное max_value (например max_value=8) при котором воспроизводится бага
     std::vector<unsigned int> as(n, 0);
     std::vector<unsigned int> sorted(n, 0);
@@ -87,6 +89,7 @@ void run(int argc, char** argv)
 
     // Аллоцируем буферы в VRAM
     gpu::gpu_mem_32u input_gpu(n);
+    gpu::gpu_mem_32u input_copy(n);
     gpu::gpu_mem_32u buffer1_gpu(n), buffer2_gpu(n), buffer3_gpu(n), buffer4_gpu(n); // TODO это просто шаблонка, можете переименовать эти буферы, сделать другого размера/типа, удалить часть, добавить новые
     gpu::gpu_mem_32u buffer_output_gpu(n);
 
@@ -109,13 +112,33 @@ void run(int argc, char** argv)
         // Запускаем кернел, с указанием размера рабочего пространства и передачей всех аргументов
         // Если хотите - можете удалить ветвление здесь и оставить только тот код который соответствует вашему выбору API
         if (context.type() == gpu::Context::TypeOpenCL) {
-            // TODO
-            throw std::runtime_error(CODE_IS_NOT_IMPLEMENTED);
-            // ocl_fillBufferWithZeros.exec();
-            // ocl_radixSort01LocalCounting.exec();
-            // ocl_radixSort02GlobalPrefixesScanSumReduction.exec();
-            // ocl_radixSort03GlobalPrefixesScanAccumulation.exec();
-            // ocl_radixSort04Scatter.exec();
+            auto workSize = [](uint size) { return gpu::WorkSize(GROUP_SIZE, size); };
+            input_gpu.copyToN(input_copy, n);
+            for (uint offset = 0; offset < 32; offset++) {
+                ocl_radixSort01LocalCounting.exec(workSize(n), input_copy, buffer1_gpu, n, offset);
+                buffer1_gpu.copyToN(buffer3_gpu, n);
+
+                ocl_fillBufferWithZeros.exec(workSize(n), buffer2_gpu, n);
+                ocl_radixSort03GlobalPrefixesScanAccumulation.exec(workSize(n), buffer1_gpu, buffer2_gpu, n, 0);
+
+                uint size = n;
+                uint pow = 1;
+
+                while (size > 0) {
+                    ocl_radixSort02GlobalPrefixesScanSumReduction.exec(workSize(size), buffer3_gpu, buffer4_gpu, size);
+                    ocl_radixSort03GlobalPrefixesScanAccumulation.exec(workSize(n), buffer4_gpu, buffer2_gpu, n, pow);
+
+                    std::swap(buffer3_gpu, buffer4_gpu);
+                    size = size / 2; 
+                    pow = pow + 1;
+                }
+
+
+                // printf("scatter began\n");
+                ocl_radixSort04Scatter.exec(workSize(n), input_copy, buffer2_gpu, buffer_output_gpu, n, offset);
+                // printf("scatter ended\n");
+                buffer_output_gpu.swap(input_copy);
+            }
         } else if (context.type() == gpu::Context::TypeCUDA) {
             // TODO
             throw std::runtime_error(CODE_IS_NOT_IMPLEMENTED);
