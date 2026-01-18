@@ -17,18 +17,18 @@ __kernel void matrix_02_transpose_coalesced_via_local_memory(
     uint local_x = get_local_id(0); 
 
     // prevent bank conflicts
-    __local float buffer[GROUP_SIZE_Y][GROUP_SIZE_X + 1];
+    __local float buffer[GROUP_SIZE_Y * GROUP_SIZE_X];
     
     if (y < h && x < w) {
-        buffer[local_y][local_x] = matrix[y * w + x];
+        buffer[local_y * GROUP_SIZE_X + local_x] = matrix[y * w + x];
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    uint tx = get_group_id(1) * GROUP_SIZE_Y + local_y; 
-    uint ty = get_group_id(0) * GROUP_SIZE_X + local_x; 
+    uint tx = get_group_id(1) * GROUP_SIZE_Y + local_x; 
+    uint ty = get_group_id(0) * GROUP_SIZE_X + local_y; 
 
     if (ty < w && tx < h) {
-        transposed_matrix[ty * h + tx] = buffer[local_y][local_x];
+        transposed_matrix[ty * h + tx] = buffer[local_x * GROUP_SIZE_Y + local_y];
     }
 }
