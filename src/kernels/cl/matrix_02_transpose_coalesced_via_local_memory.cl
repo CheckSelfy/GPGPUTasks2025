@@ -16,7 +16,8 @@ __kernel void matrix_02_transpose_coalesced_via_local_memory(
     uint local_y = get_local_id(1); 
     uint local_x = get_local_id(0); 
 
-    __local float buffer[GROUP_SIZE_Y][GROUP_SIZE_X];
+    // prevent bank conflicts
+    __local float buffer[GROUP_SIZE_Y][GROUP_SIZE_X + 1];
     
     if (y < h && x < w) {
         buffer[local_y][local_x] = matrix[y * w + x];
