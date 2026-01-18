@@ -11,23 +11,23 @@ __kernel void matrix_02_transpose_coalesced_via_local_memory(
                                 unsigned int w,
                                 unsigned int h)
 {
-    uint i = get_global_id(1); // y
-    uint j = get_global_id(0); // x
-    uint local_i = get_local_id(1); // local_y
-    uint local_j = get_local_id(0); // local_x
+    uint y = get_global_id(1); 
+    uint x = get_global_id(0); 
+    uint local_y = get_local_id(1); 
+    uint local_x = get_local_id(0); 
 
     __local float buffer[GROUP_SIZE_Y][GROUP_SIZE_X];
     
-    if (i < h && j < w) {
-        buffer[local_i][local_j] = matrix[i * w + j];
+    if (y < h && x < w) {
+        buffer[local_y][local_x] = matrix[y * w + x];
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    uint ti = get_group_id(1) * GROUP_SIZE_Y + local_i; // transposed_x
-    uint tj = get_group_id(0) * GROUP_SIZE_X + local_j; // transposed_y
+    uint tx = get_group_id(1) * GROUP_SIZE_Y + local_y; 
+    uint ty = get_group_id(0) * GROUP_SIZE_X + local_x; 
 
-    if (tj < w && ti < h) {
-        transposed_matrix[tj * h + ti] = buffer[local_i][local_j];
+    if (ty < w && tx < h) {
+        transposed_matrix[ty * h + tx] = buffer[local_y][local_x];
     }
 }

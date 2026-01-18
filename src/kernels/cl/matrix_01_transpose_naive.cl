@@ -11,12 +11,12 @@ __kernel void matrix_01_transpose_naive(
                                 unsigned int w,
                                 unsigned int h)
 {
-    uint i = get_global_id(1);
-    uint j = get_global_id(0);
+    uint y = get_global_id(1);
+    uint x = get_global_id(0);
     
-    if (i >= h || j >= w) {
+    if (y >= h || x >= w) {
         return;
     }
 
-    transposed_matrix[j * h + i] = matrix[i * w + j];
+    transposed_matrix[x * h + y] = matrix[y * w + x];
 }
