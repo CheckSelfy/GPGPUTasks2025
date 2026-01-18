@@ -12,11 +12,16 @@ __kernel void prefix_sum_01_reduction(
     uint n)
 {
     uint idx = get_global_id(0);
-    if (idx >= n) { return; }
+
+    // if (idx * 2 >  n) {
+    //     printf("error, idx=%d, n=%d\n", idx, n);
+    // }
 
     if (idx * 2 + 1 < n) { 
         next_pow2_sum[idx] = pow2_sum[idx  * 2] + pow2_sum[idx * 2 + 1];
-    } else {
+    } else if (idx * 2 < n) {
         next_pow2_sum[idx] = pow2_sum[idx  * 2];
+    } else {
+        next_pow2_sum[idx] = 0;
     }
 }
