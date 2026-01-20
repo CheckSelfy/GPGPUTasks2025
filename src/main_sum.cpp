@@ -76,7 +76,7 @@ void run(int argc, char** argv)
 
     // Прогружаем входные данные по PCI-E шине: CPU RAM -> GPU VRAM
     {
-        std::vector<time_t> times;
+        std::vector<double> times;
         double total_bytes = n * sizeof(values[0]);
 
         for (int i = 0; i < 3; i++) {
